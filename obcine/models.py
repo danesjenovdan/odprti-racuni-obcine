@@ -4,8 +4,11 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from importlib import import_module
 
 from mptt.models import MPTTModel, TreeForeignKey
+
+from datetime import datetime
 
 from obcine.parse_utils import XLSXAppraBudget, XLSXAppraRevenue, download_image
 
@@ -42,6 +45,115 @@ class Timestampable(models.Model):
         abstract = True
 
 
+class Task(Timestampable):
+    started_at = models.DateTimeField(
+        help_text='time when started',
+        blank=True,
+        null=True,
+        default=None
+    )
+    finished_at = models.DateTimeField(
+        help_text='time when finished',
+        blank=True,
+        null=True,
+        default=None
+    )
+    errored_at = models.DateTimeField(
+        help_text='time when errored',
+        blank=True,
+        null=True,
+        default=None
+    )
+    error_msg = models.TextField()
+    name = models.TextField(blank=False, null=False, help_text='Name of task')
+    email_msg = models.TextField(blank=False, null=False, help_text='A message sent to the administrator when the task is complete.')
+    payload = models.JSONField(help_text='Payload kwargs')
+
+
+    def run(self):
+        self.started_at = datetime.now()
+        self.save()
+        try:
+            data = self.payload
+            model = data['model']
+            parser = data['parser']
+            definition = data.get('definition', None)
+            month = data.get('month', None)
+            pk = data['pk']
+            self_model = data['self']
+
+            models_module = import_module('obcine.models')
+            parser_module = import_module('obcine.parse_utils')
+
+            models_class = getattr(models_module, model)
+            document_class = getattr(models_module, self_model)
+            parser_class = getattr(parser_module, parser)
+
+            if definition and definition != 'None':
+                definition = getattr(models_module, definition)
+
+            document = document_class.objects.get(id=pk)
+
+            parser = parser_class(
+                document,
+                model=models_class,
+                definiton_model=None,
+                month=month
+            )
+            if settings.ENABLE_S3:
+                image_path = download_image(document.file.url, document.file.name)
+                parser.parse_file(file_path=image_path)
+            else:
+                parser.parse_file(file_path=document.file.path)
+
+            self.finished_at = datetime.now()
+            self.save()
+
+        except Exception as e:
+            self.errored_at = datetime.now()
+            self.error_msg = e
+            self.save()
+
+
+class ParsableDocument(models.Model):
+    municipality_year = models.ForeignKey('MunicipalityFinancialYear', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('Municipality Financial Year'))
+
+    # TODO maybe remove next two fields
+    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('Municipality'))
+    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('Year'))
+    file = models.FileField(
+        verbose_name=_('File'),
+        validators=[
+            FileExtensionValidator(allowed_extensions=['xlsx']),
+            document_size_validator
+        ]
+    )
+
+    def parse(self, parser, model, definition=None, month=None):
+        if definition:
+            definition = definition.__name__
+        Task(
+            name='Parse xls',
+            payload={
+                'model': f'{model.__name__}',
+                'parser': f'{parser.__name__}',
+                'definition': f'{definition}',
+                'month': f'{month}',
+                'pk': self.id,
+                'self': f'{self.__class__.__name__}',
+            }
+        ).save()
+        # parser = parser(self, model, definition, month)
+        # if settings.ENABLE_S3:
+        #     image_path = download_image(self.file.url, self.file.name)
+        #     parser.parse_file(file_path=image_path)
+        # else:
+        #     parser.parse_file(file_path=self.file.path)
+
+    class Meta:
+        abstract = True
+
+
 class Municipality(Timestampable):
     name = models.TextField(verbose_name=_('Nemo of municipality'))
 
@@ -71,6 +183,9 @@ class FinancialYear(models.Model):
     def __str__(self):
         return self.name
 
+    def is_current(self):
+        return str(datetime.now().year) == self.name
+
     class Meta:
         verbose_name = _('Financial year')
         verbose_name_plural = _('Financial years')
@@ -98,6 +213,7 @@ class FinancialCategory(MPTTModel):
     def get_json_tree(self):
         return {
             'name': self.name,
+            'code': self.code,
             'amount': float(self.amount),
             'children': [child.get_json_tree() for child in self.get_children().order_by('order') if child.amount]
         }
@@ -156,51 +272,42 @@ class RevenueDefinition(MPTTModel):
         }
 
 
-class PlannedRevenue(models.Model):
+class Revenue(models.Model):
     name = models.CharField(max_length=256, verbose_name=_('Name'))
     code = models.TextField(verbose_name=_('Code'))
     definition = models.ForeignKey('RevenueDefinition', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('RevenueDefinition'), null=True)
     municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('Organiaztion'))
     year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE,null=True, blank=True, related_name='%(class)s_related', verbose_name=_('Year'))
     amount = models.DecimalField(decimal_places=2, max_digits=10, null=True, verbose_name=_('Amount'))
+
+    class Meta:
+        abstract = True
+
+
+class PlannedRevenue(Revenue):
     document = models.ForeignKey('PlannedRevenueDocument', on_delete=models.CASCADE)
 
 
-class MonthlyRevenue(models.Model):
-    name = models.CharField(max_length=256, verbose_name=_('Name'))
-    code = models.TextField(verbose_name=_('Code'))
-    definition = models.ForeignKey('RevenueDefinition', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('RevenueDefinition'))
-    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='monthly_revenue_realizations', verbose_name=_('Organiaztion'))
-    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE,null=True, blank=True, related_name='monthly_revenue_realizations', verbose_name=_('Year'))
+class YearlyRevenue(Revenue):
+    document = models.ForeignKey('YearlyRevenueDocument', on_delete=models.CASCADE)
+
+
+class MonthlyRevenue(Revenue):
     month = models.IntegerField(choices=Months.choices, verbose_name=_('Month'))
-    amount = models.DecimalField(decimal_places=2, max_digits=10, null=True, verbose_name=_('Amount'))
     document = models.ForeignKey('MonthlyRevenueDocument', on_delete=models.CASCADE)
 
 
-class PlannedRevenueDocument(models.Model):
-    file = models.FileField(
-        verbose_name=_('File'),
-        validators=[
-            FileExtensionValidator(allowed_extensions=['xlsx']),
-            document_size_validator
-        ]
-    )
-    municipality_year = models.ForeignKey('MunicipalityFinancialYear', on_delete=models.CASCADE, related_name='revenue_documents', verbose_name=_('Municipality Financial Year'))
-    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='revenue_documents', verbose_name=_('Municipality'))
-    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE, related_name='revenue_documents', verbose_name=_('Year'))
-
+class PlannedRevenueDocument(ParsableDocument):
     def __str__(self):
         return f'{self.year.name}'
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        parser = XLSXAppraRevenue(self, PlannedRevenue, RevenueDefinition)
-        if settings.ENABLE_S3:
-            image_path = download_image(self.file.url, self.file.name)
-            parser.parse_file(file_path=image_path)
-        else:
-            parser.parse_file(file_path=self.file.path)
-
+        self.parse(
+            parser=XLSXAppraRevenue,
+            model=PlannedRevenue,
+            definition=RevenueDefinition
+        )
 
     class Meta:
         unique_together = ('municipality', 'year')
@@ -208,20 +315,25 @@ class PlannedRevenueDocument(models.Model):
         verbose_name_plural = _('Planned revenue documents')
 
 
-class MonthlyRevenueDocument(models.Model):
-    file = models.FileField(
-        verbose_name=_('File'),
-        validators=[
-            FileExtensionValidator(allowed_extensions=['xlsx']),
-            document_size_validator
-        ]
-    )
-    municipality_year = models.ForeignKey('MunicipalityFinancialYear', on_delete=models.CASCADE, related_name='monthly_revenue_documents', verbose_name=_('Municipality Financial Year'))
+class YearlyRevenueDocument(ParsableDocument):
+    def __str__(self):
+        return f'{self.year.name}'
 
-    # TODO remove next 2 fields
-    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='monthly_revenue_documents', verbose_name=_('Municipality'))
-    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE, related_name='monthly_revenue_documents', verbose_name=_('Year'))
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.parse(
+            parser=XLSXAppraRevenue,
+            model=YearlyRevenue,
+            definition=RevenueDefinition
+        )
 
+    class Meta:
+        unique_together = ('municipality', 'year')
+        verbose_name = _('Yearly revenue document')
+        verbose_name_plural = _('Yearly revenue documents')
+
+
+class MonthlyRevenueDocument(ParsableDocument):
     month = models.IntegerField(choices=Months.choices, verbose_name=_('Month'))
 
     def __str__(self):
@@ -229,13 +341,12 @@ class MonthlyRevenueDocument(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        parser = XLSXAppraRevenue(self, MonthlyRevenue, RevenueDefinition, self.month)
-        if settings.ENABLE_S3:
-            image_path = download_image(self.file.url, self.file.name)
-            parser.parse_file(file_path=image_path)
-        else:
-            parser.parse_file(file_path=self.file.path)
-
+        self.parse(
+            parser=XLSXAppraRevenue,
+            model=MonthlyRevenue,
+            definition=RevenueDefinition,
+            month=self.month
+        )
 
     class Meta:
         unique_together = ('municipality', 'year', 'month')
@@ -251,18 +362,28 @@ class ExpenseDefinition(FinancialCategory):
         verbose_name_plural = _('Revenue definitions')
 
 
-class PlannedExpense(FinancialCategory):
+class Expanse(FinancialCategory):
     municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('Organiaztion'))
     year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE,null=True, blank=True, related_name='%(class)s_related', verbose_name=_('Year'))
+    class Meta:
+        abstract = True
+
+
+class PlannedExpense(Expanse):
     document = models.ForeignKey('PlannedExpenseDocument', on_delete=models.CASCADE)
     class Meta:
         verbose_name = _('Planned expense')
         verbose_name_plural = _('Planned expense')
 
 
-class MonthlyExpense(FinancialCategory):
-    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='%(class)s_related', verbose_name=_('Organiaztion'))
-    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE,null=True, blank=True, related_name='%(class)s_related', verbose_name=_('Year'))
+class YearlyExpense(Expanse):
+    document = models.ForeignKey('YearlyExpenseDocument', on_delete=models.CASCADE)
+    class Meta:
+        verbose_name = _('Yearly expense')
+        verbose_name_plural = _('Yearly expense')
+
+
+class MonthlyExpense(Expanse):
     month = models.IntegerField(choices=Months.choices, verbose_name=_('Month'))
     document = models.ForeignKey('MonthlyExpenseDocument', on_delete=models.CASCADE)
     class Meta:
@@ -270,47 +391,24 @@ class MonthlyExpense(FinancialCategory):
         verbose_name_plural = _('Monthly expense')
 
 
-class PlannedExpenseDocument(models.Model):
-    file = models.FileField(
-        verbose_name=_('File'),
-        validators=[
-            FileExtensionValidator(allowed_extensions=['xlsx']),
-            document_size_validator
-        ]
-    )
-    municipality_year = models.ForeignKey('MunicipalityFinancialYear', on_delete=models.CASCADE, related_name='expense_documents', verbose_name=_('Municipality Financial Year'))
-    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='expense_documents', verbose_name=_('Municipality'))
-    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE, related_name='expense_documents', verbose_name=_('Year'))
-
+class PlannedExpenseDocument(ParsableDocument):
     def __str__(self):
         return f'{self.year.name}'
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        parser = XLSXAppraBudget(self, PlannedExpense)
-        if settings.ENABLE_S3:
-            image_path = download_image(self.file.url, self.file.name)
-            parser.parse_file(file_path=image_path)
-        else:
-            parser.parse_file(file_path=self.file.path)
-
+        self.parse(
+            parser=XLSXAppraBudget,
+            model=PlannedExpense,
+        )
 
     class Meta:
         unique_together = ('municipality', 'year')
         verbose_name = _('Planned expense document')
         verbose_name_plural = _('Planned expense documents')
 
-class MonthlyExpenseDocument(models.Model):
-    file = models.FileField(
-        verbose_name=_('File'),
-        validators=[
-            FileExtensionValidator(allowed_extensions=['xlsx']),
-            document_size_validator
-        ]
-    )
-    municipality_year = models.ForeignKey('MunicipalityFinancialYear', on_delete=models.CASCADE, related_name='monthly_expense_documents', verbose_name=_('Municipality Financial Year'))
-    municipality = models.ForeignKey('Municipality', on_delete=models.CASCADE, related_name='monthly_expense_documents', verbose_name=_('Municipality'))
-    year = models.ForeignKey('FinancialYear', on_delete=models.CASCADE, related_name='monthly_expense_documents', verbose_name=_('Year'))
+
+class MonthlyExpenseDocument(ParsableDocument):
     month = models.IntegerField(choices=Months.choices, verbose_name=_('Month'))
 
     def __str__(self):
@@ -318,15 +416,30 @@ class MonthlyExpenseDocument(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        parser = XLSXAppraBudget(self, MonthlyExpense, self.month)
-        if settings.ENABLE_S3:
-            image_path = download_image(self.file.url, self.file.name)
-            parser.parse_file(file_path=image_path)
-        else:
-            parser.parse_file(file_path=self.file.path)
-
+        self.parse(
+            parser=XLSXAppraBudget,
+            model=MonthlyExpense,
+            month=self.month
+        )
 
     class Meta:
         unique_together = ('municipality', 'year', 'month')
         verbose_name = _('Monthly expense realization document')
         verbose_name_plural = _('Monthly expense realization documents')
+
+
+class YearlyExpenseDocument(ParsableDocument):
+    def __str__(self):
+        return f'{self.year.name}'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.parse(
+            parser=XLSXAppraBudget,
+            model=YearlyExpense
+        )
+
+    class Meta:
+        unique_together = ('municipality', 'year')
+        verbose_name = _('Yearly expense document')
+        verbose_name_plural = _('Yearly expense documents')
