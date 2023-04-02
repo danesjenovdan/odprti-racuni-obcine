@@ -1,13 +1,12 @@
 {% with request.resolver_match.kwargs.municipality_id as municipality_id %}
-{% with request.resolver_match.kwargs.year_id as year_id %}
 
 <section class="budget">
   <div class="container">
     <div class="row justify-content-center">
       <div class="col">
         <h3>Proračun {{ year }}</h3>
-        {% if not year_id and year %}
-        <a class="budget-box-link" href="{% url 'overview' municipality_id=municipality_id year_id=year.id %}">
+        {% if request.resolver_match.url_name == 'overview' %}
+        <a class="budget-box-link" href="{% url 'cut_of_funds' municipality_id=municipality_id year_id=year.id %}">
         {% else %}
         <span class="budget-box-link">
         {% endif %}
@@ -16,16 +15,13 @@
               <i class="icon icon-prihodki me-2"></i> Prihodki
             </div>
             <div>
-              {% if summary.yearly_revenue != None %}
-              <div class="budget-amount">
-                <small class="amount-description">Proračun</small>
-                <span class="amount-number">{{ summary.yearly_revenue|floatformat:"2g" }}</span>
-              </div>
-              {% else %}
+              {% if summary.planned_revenue != None %}
               <div class="budget-amount">
                 <small class="amount-description">Proračun</small>
                 <span class="amount-number">{{ summary.planned_revenue|floatformat:"2g" }}</span>
               </div>
+              {% endif %}
+              {% if summary.realized_revenue != None %}
               <div class="budget-amount">
                 <small class="amount-description">Dejansko stanje</small>
                 <span class="amount-number">{{ summary.realized_revenue|floatformat:"2g" }}</span>
@@ -33,21 +29,17 @@
               {% endif %}
             </div>
             <div>
-              {% if summary.yearly_revenue != None %}
-              <div class="budget-bar">
-                <div class="bar-max bar-max--1" style="width: {% widthratio summary.yearly_revenue_percentage 1 100 %}%;">
-                  <div class="bar-amount bar-amount--1"></div>
-                </div>
-              </div>
-              {% else %}
+              {% if summary.planned_revenue_percentage != None %}
               <div class="budget-bar">
                 <div class="bar-max bar-max--1" style="width: {% widthratio summary.planned_revenue_percentage 1 100 %}%;">
                   <div class="bar-amount bar-amount--1"></div>
                 </div>
               </div>
+              {% endif %}
+              {% if summary.realized_revenue_percentage != None %}
               <div class="budget-bar">
-                <div class="bar-max bar-max--1">
-                  <div class="bar-amount bar-amount--2" style="width: {% widthratio summary.realized_revenue_percentage 1 100 %}%;"></div>
+                <div class="bar-max bar-max--1" style="width: {% widthratio summary.realized_revenue_percentage 1 100 %}%;">
+                  <div class="bar-amount bar-amount--2"></div>
                 </div>
               </div>
               {% endif %}
@@ -56,16 +48,13 @@
               <i class="icon icon-odhodki me-2"></i> Odhodki
             </div>
             <div>
-              {% if summary.yearly_expenses != None %}
-              <div class="budget-amount">
-                <small class="amount-description">Proračun</small>
-                <span class="amount-number">{{ summary.yearly_expenses|floatformat:"2g" }}</span>
-              </div>
-              {% else %}
+              {% if summary.planned_expenses != None %}
               <div class="budget-amount">
                 <small class="amount-description">Proračun</small>
                 <span class="amount-number">{{ summary.planned_expenses|floatformat:"2g" }}</span>
               </div>
+              {% endif %}
+              {% if summary.realized_expenses != None %}
               <div class="budget-amount">
                 <small class="amount-description">Dejansko stanje</small>
                 <span class="amount-number">{{ summary.realized_expenses|floatformat:"2g" }}</span>
@@ -73,32 +62,28 @@
               {% endif %}
             </div>
             <div>
-              {% if summary.yearly_expenses != None %}
-              <div class="budget-bar">
-                <div class="bar-max bar-max--2" style="width: {% widthratio summary.yearly_expenses_percentage 1 100 %}%;">
-                  <div class="bar-amount bar-amount--1"></div>
-                </div>
-              </div>
-              {% else %}
+              {% if summary.planned_expenses_percentage != None %}
               <div class="budget-bar">
                 <div class="bar-max bar-max--2" style="width: {% widthratio summary.planned_expenses_percentage 1 100 %}%;">
                   <div class="bar-amount bar-amount--1"></div>
                 </div>
               </div>
+              {% endif %}
+              {% if summary.realized_expenses_percentage != None %}
               <div class="budget-bar">
-                <div class="bar-max bar-max--2" style="width: {% widthratio summary.planned_expenses_percentage 1 100 %}%;">
-                  <div class="bar-amount bar-amount--2" style="width: {% widthratio summary.realized_expenses_percentage 1 100 %}%;"></div>
+                <div class="bar-max bar-max--2" style="width: {% widthratio summary.realized_expenses_percentage 1 100 %}%;">
+                  <div class="bar-amount bar-amount--2"></div>
                 </div>
               </div>
               {% endif %}
             </div>
           </div>
-          {% if not year_id and year %}
+          {% if request.resolver_match.url_name == 'overview' %}
           <div class="text-center mt-5 mb-3">
-            <span class="button-arrow-link">Podrobneje razišči letošnji proračun in dejansko stanje <i class="icon icon-squiggly-arrow ms-1"></i></span>
+            <span class="button-arrow-link">Podrobneje razišči letošnji proračun in dejansko stanje <i class="icon icon-puscica ms-1"></i></span>
           </div>
           {% endif %}
-        {% if not year_id and year %}
+        {% if request.resolver_match.url_name == 'overview' %}
         </a>
         {% else %}
         </span>
@@ -108,5 +93,4 @@
   </div>
 </section>
 
-{% endwith %}
 {% endwith %}

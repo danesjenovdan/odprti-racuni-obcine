@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block description %}
   {% include "description.html" with show_year_chooser=True page_title="Razrez sredstev" page_description="Open Budget application provides an opportunity for the public to explore and visually interact with Erie’s operating and capital expenses." %}
@@ -9,17 +10,29 @@
 {% endblock budget %}
 
 {% block content %}
-    <div class="content-box">
-        Tukaj pride graf </br>
-        Tukaj pride tabela </br>
+
+{% with request.resolver_match.kwargs.municipality_id as municipality_id %}
+
+<section class="overview-content pt-0">
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <a name="tabs"></a>
+        <div class="tabs">
+          <a href="{% url 'cut_of_funds' municipality_id=municipality_id year_id=year.id %}?type=revenue#tabs" class="tab {% if tree_type == "revenue" %}active{% endif %}"><i class="icon icon-prihodki icon-size-2 me-2"></i> Kje je občina pridobila sredstva?</a>
+          <a href="{% url 'cut_of_funds' municipality_id=municipality_id year_id=year.id %}?type=expenses#tabs" class="tab {% if tree_type == "expenses" %}active{% endif %}"><i class="icon icon-odhodki icon-size-2 me-2"></i> Kam so šla občinska sredstva?</a>
+        </div>
+      </div>
     </div>
+    <div class="row">
+      <a name="table"></a>
+      <div class="col" id="js-table-container"></div>
+      <script>window.__BAR_CHART_TABLE_URL__ = "{% url 'cut_of_funds_table' municipality_id=municipality_id year_id=year.id %}";</script>
+      <script src="{% static 'js/bar_chart_table.js' %}"></script>
+    </div>
+  </div>
+</section>
 
-    {% if year.is_current %}
-    Trenutno leto kaži primerjavo s planiranim in realiziranim <br>
-    {% endif %}
-
-    Revenues: {{ revenues }}
-    <br>
-    Expenses: {{ expenses }}
+{% endwith %}
 
 {% endblock content %}

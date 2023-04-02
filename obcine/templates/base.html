@@ -13,19 +13,6 @@
 
   <link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">
   <link rel="stylesheet" href="{% static "css/style.css" %}">
-
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.2.1/chart.umd.js"
-    integrity="sha512-vCUbejtS+HcWYtDHRF2T5B0BKwVG/CLeuew5uT2AiX4SJ2Wff52+kfgONvtdATqkqQMC9Ye5K+Td0OTaz+P7cw=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  ></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/patternomaly/1.3.2/patternomaly.min.js"
-    integrity="sha512-Zjnjh2DCl/MrwdZ8FNp25vSbXac3yWUWoMn0CL8qQ/K11HGv7cJ9RGNUiojnSfqVtwbGf+eyqEEjiw2hlHd6iQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  ></script>
 </head>
 
 <body>
@@ -34,7 +21,9 @@
     <nav class="navbar navbar-expand-lg bg-body">
       <div class="container">
         <a class="navbar-brand" href="#">
-          OR LOGO - {{ municipality.name }}
+          <div class="logo">
+            <span class="subtitle">{{ municipality.name }}</span>
+          </div>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -81,7 +70,7 @@
 
     <footer class="footer bg-body">
       <div class="container">
-        <hr class="hr-squiggly-line">
+        <hr class="hr-wave">
         <div class="row footer-max-width align-items-center justify-content-center my-5 py-2">
           <div class="col text-left">
             <div class="d-flex align-items-center">
@@ -111,7 +100,7 @@
             </p>
           </div>
         </div>
-        <hr class="hr-dotted-line">
+        <hr class="hr-pike-footer">
         <div class="row">
           <div class="col-4">
             <a class="footer-small-link" href="#">Pogoji uporabe</a>
