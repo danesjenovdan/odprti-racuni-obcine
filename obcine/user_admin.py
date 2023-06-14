@@ -1,7 +1,10 @@
 from django.contrib import admin, messages
 from django.shortcuts import redirect
+from django.urls import NoReverseMatch, reverse
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
+from django.apps import apps
+from django.utils.text import capfirst
 
 from obcine.models import (PlannedExpense, MonthlyExpenseDocument, MonthlyExpense, MunicipalityFinancialYear,
     PlannedExpenseDocument, PlannedRevenueDocument, MonthlyRevenueDocument, PlannedRevenue, YearlyExpense,
@@ -124,7 +127,7 @@ class MunicipalityFinancialYearAdmin(LimitedAdmin):
         return obj.financial_year.name
 
     def page_url(self, obj):
-        return mark_safe(f'<a href="/pregled/{obj.municipality.id}/">Povezava do spletnega mesta</a>')
+        return mark_safe(f'<a href="/pregled/{obj.municipality.id}/" target="_blank">Povezava do spletnega mesta</a>')
 
 
     def save_formset(self, request, form, formset, change):
@@ -183,7 +186,7 @@ class YearlyRevenueObcineAdmin(LimitedAdmin):
             return 'Napaka pri izbiri konta'
 
 class MonthlyRevenueRealizatioObcineAdmin(LimitedAdmin):
-    list_display = ['year', 'month', 'name', 'code', 'amount', 'status']
+    list_display = ['year', 'name', 'code', 'amount', 'status']
     readonly_fields = ['document', 'year', 'amount', 'municipality']
     list_filter = [SimpleFinanceYearListFilter]
 
@@ -209,6 +212,8 @@ class MunicipalityModelAdmin(admin.ModelAdmin):
 
 class AdminSite(admin.AdminSite):
     site_header = _('Nadzorna plošča')
+    site_title = _('Nadzorna plošča')
+    index_title = _('Nadzorna plošča')
 
     def each_context(self, request):
         url_attrs = []
@@ -256,27 +261,27 @@ class AdminSite(admin.AdminSite):
 
         # Sort the models alphabetically within each app.
         for app in app_list:
-            if not request.user.is_superuser:
-                for idx, model in enumerate(app['models']):
-                    # add id of users municipality to municipality url
-                    if model['object_name'] == 'Municipality':
-                        user_municipality_id = request.user.municipality_id
-                        model['admin_url'] = model['admin_url'] + str(user_municipality_id)
+            for idx, model in enumerate(app['models']):
+                # add id of users municipality to municipality url
+                if model['object_name'] == 'Municipality':
+                    user_municipality_id = request.user.municipality_id
+                    model['admin_url'] = model['admin_url'] + str(user_municipality_id)
+            #print(app['app_url'])
 
         return app_list
 
-admin_site = AdminSite(name='Nadzorna plošča')
+admin_site = AdminSite(name='obcine-admin')
 
 admin_site.register(MunicipalityFinancialYear, MunicipalityFinancialYearAdmin)
 
-admin_site.register(PlannedExpense, BudgetAdmin)
-admin_site.register(MonthlyExpense, MonthlyBudgetRealizatioAdmin)
-admin_site.register(YearlyExpense, YearlyBudgetAdmin)
+# admin_site.register(PlannedExpense, BudgetAdmin)
+# admin_site.register(MonthlyExpense, MonthlyBudgetRealizatioAdmin)
+# admin_site.register(YearlyExpense, YearlyBudgetAdmin)
 
-admin_site.register(PlannedRevenue, RevenueAdmin)
-admin_site.register(MonthlyRevenue, MonthlyRevenueRealizatioObcineAdmin)
-admin_site.register(YearlyRevenue, YearlyRevenueObcineAdmin)
+# admin_site.register(PlannedRevenue, RevenueAdmin)
+# admin_site.register(MonthlyRevenue, MonthlyRevenueRealizatioObcineAdmin)
+# admin_site.register(YearlyRevenue, YearlyRevenueObcineAdmin)
+
 admin_site.register(Municipality, MunicipalityModelAdmin)
 
 #admin_site.register(RevenueDefinition, RevenueDefinitionAdmin)
-

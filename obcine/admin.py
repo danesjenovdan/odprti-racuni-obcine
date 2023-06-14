@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from django.utils.translation import gettext_lazy as _
 from mptt.admin import MPTTModelAdmin
 
@@ -127,7 +128,7 @@ class TaskAdmin(admin.ModelAdmin):
     list_display = ['name']
 
 class MonthlyRevenueRealizatioObcineAdmin(admin.ModelAdmin):
-    list_display = ['year', 'month', 'name', 'code', 'amount', 'status']
+    list_display = ['year', 'name', 'code', 'amount', 'status']
     list_filter = ['year', 'municipality']
 
     def status(self, obj):
@@ -172,22 +173,38 @@ class InstructionsAdmin(admin.ModelAdmin):
         # else:
         super().save_model(request, obj, form, change)
 
-admin.site.register(User, UserAdmin)
-admin.site.register(Task, TaskAdmin)
+class SuperAdminSite(admin.AdminSite):
+    site_header = 'Odprti računi občine'
+    site_title = 'Odprti računi občine'
+    index_title = 'Odprti računi občine'
 
-admin.site.register(PlannedExpense, BudgetAdmin)
-admin.site.register(MonthlyExpense, MonthlyBudgetRealizatioAdmin)
+    def has_permission(self, request):
+        """
+        Prevent municipality users to login to superadmin site
+        """
+        return request.user.is_superuser
 
-admin.site.register(PlannedRevenue, RevenueAdmin)
-admin.site.register(MonthlyRevenue, MonthlyRevenueRealizatioObcineAdmin)
 
-admin.site.register(YearlyExpense, YearlyBudgetAdmin)
-admin.site.register(YearlyRevenue, YearlyRevenueObcineAdmin)
+superadmin = SuperAdminSite(name='admin')
 
-admin.site.register(FinancialYear, FinancialYearModelAdmin)
-admin.site.register(Municipality, MunicipalityModelAdmin)
-admin.site.register(RevenueDefinition, RevenueDefinitionAdmin)
+superadmin.register(User, UserAdmin)
+superadmin.register(Task, TaskAdmin)
 
-admin.site.register(MunicipalityFinancialYear, MunicipalityFinancialYearAdmin)
+superadmin.register(Group)
 
-admin.site.register(Instructions, InstructionsAdmin)
+superadmin.register(PlannedExpense, BudgetAdmin)
+superadmin.register(MonthlyExpense, MonthlyBudgetRealizatioAdmin)
+
+superadmin.register(PlannedRevenue, RevenueAdmin)
+superadmin.register(MonthlyRevenue, MonthlyRevenueRealizatioObcineAdmin)
+
+superadmin.register(YearlyExpense, YearlyBudgetAdmin)
+superadmin.register(YearlyRevenue, YearlyRevenueObcineAdmin)
+
+superadmin.register(FinancialYear, FinancialYearModelAdmin)
+superadmin.register(Municipality, MunicipalityModelAdmin)
+superadmin.register(RevenueDefinition, RevenueDefinitionAdmin)
+
+superadmin.register(MunicipalityFinancialYear, MunicipalityFinancialYearAdmin)
+
+superadmin.register(Instructions, InstructionsAdmin)
