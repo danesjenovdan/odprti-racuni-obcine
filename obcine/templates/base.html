@@ -6,6 +6,9 @@
 
   <title>Odprti računi občine</title>
 
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static "favicons/apple-touch-icon.png" %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static "favicons/favicon-32x32.png" %}">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,400;1,700&amp;display=swap">
@@ -52,7 +55,7 @@
               >Primerjava skozi čas</a>
             </li>
           </ul>
-          <span class="nav-right-content">
+          <span class="nav-right-content" style="visibility: hidden;">
             <a class="nav-right-link" href="#">Kako uporabljati aplikacijo?</a>
           </span>
         </div>
@@ -75,36 +78,29 @@
           <div class="col text-left">
             <div class="d-flex align-items-center">
               <div class="footer-logo me-3">
-                <img src="https://participativni-proracun.djnd.si/generated/coats/coat-sveti-jurij-v-slovenskih-goricah.png" alt="Občina logo">
+                <img src="{{ municipality.logo.url }}" alt="Logo {{ municipality.name }}">
               </div>
               <div>
                 <h6>{{ municipality.name }}</h6>
                 <p>
-                  <a href="#" target="_blank">Občinsko spletno mesto</a>
+                  <a href="{{ municipality.link }}" target="_blank">Občinsko spletno mesto</a>
                 </p>
               </div>
             </div>
           </div>
           <div class="col text-center">
-            <h6>Podatki</h6>
-            <p>
-              Podatki so pridobljeni iz XX.<br>
-              Celotno bazo podatkov si lahko prenesete <a href="#">tukaj</a>.
-            </p>
-          </div>
-          <div class="col text-center">
             <h6>Odprti računi</h6>
             <p>
-              Aplikacijo sta razvila <a href="https://danesjenovdan.si">Danes je nov dan</a> in
-              <a href="#">Organizacija za participatorno družbo</a>.
+              Aplikacijo sta razvila <a href="https://danesjenovdan.si" target="_blank">Danes je nov dan</a> in
+              <a href="http://dopd.si/" target="_blank">Organizacija za participatorno družbo</a>.
             </p>
           </div>
         </div>
         <hr class="hr-pike-footer">
         <div class="row">
-          <div class="col-4">
+          {% comment %} <div class="col-4">
             <a class="footer-small-link" href="#">Pogoji uporabe</a>
-          </div>
+          </div> {% endcomment %}
           <div class="col text-end align-items-center">
             <span class="footer-small-link">Projekt Odprti računi sofinancira Ministrstvo za javno upravo iz Sklada za NVO.</span>
             <img class="mju-logo ms-4" src="{% static "mju-logo.svg" %}" alt="Ministrstvo za javno upravo">

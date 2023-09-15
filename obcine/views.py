@@ -23,40 +23,64 @@ def get_year(year_id, municipality):
     municipality_financial_year = MunicipalityFinancialYear.objects.filter(
         financial_year_id=year_id,
         municipality=municipality,
-        is_published=True
+        is_published=True,
     )
     if municipality_financial_year:
         return municipality_financial_year.first().financial_year
     else:
-        municipality_financial_year = MunicipalityFinancialYear.objects.filter(
-            municipality=municipality,
-            is_published=True
-        ).order_by('-financial_year__name').first()
+        municipality_financial_year = (
+            MunicipalityFinancialYear.objects.filter(
+                municipality=municipality,
+                is_published=True,
+            )
+            .order_by("-financial_year__name")
+            .first()
+        )
         if municipality_financial_year:
             return municipality_financial_year.financial_year
         else:
             raise Http404(_("No published financial year found"))
 
+
 def get_municipality_published_years(municipality):
-    municipality_financial_year = [i.financial_year for i in MunicipalityFinancialYear.objects.filter(
-        municipality=municipality,
-        is_published=True
-    ).order_by('financial_year__name')]
+    municipality_financial_year = [
+        i.financial_year
+        for i in MunicipalityFinancialYear.objects.filter(
+            municipality=municipality,
+            is_published=True,
+        ).order_by("financial_year__name")
+    ]
     return municipality_financial_year
+
 
 def get_tree_type(query_dict):
     return "expenses" if query_dict.get("type", "") == "expenses" else "revenue"
 
+
 def get_cache_key(municipality, year, endpoint, type):
     mfy = MunicipalityFinancialYear.objects.filter(
-        financial_year=year,
-        municipality=municipality
+        financial_year=year, municipality=municipality
     ).first()
-    cache_key = f'{endpoint}_{type}_{municipality.id}_{year.id}_{mfy.updated_at.isoformat()}'
+    cache_key = (
+        f"{endpoint}_{type}_{municipality.id}_{year.id}_{mfy.updated_at.isoformat()}"
+    )
     return cache_key
 
+
+def get_document_date(data_model, municipality, year):
+    obj = (
+        data_model.objects.filter(municipality=municipality, year=year)
+        .filter(document__timestamp__isnull=False)
+        .order_by("-document__timestamp")
+        .first()
+    )
+    if obj:
+        return obj.document.timestamp
+    return None
+
+
 def get_summary(municipality, year, summary_type="monthly"):
-    summary_cache_key = get_cache_key(municipality, year, 'summary', summary_type)
+    summary_cache_key = get_cache_key(municipality, year, "summary", summary_type)
 
     data = cache.get(summary_cache_key)
     if data:
@@ -83,6 +107,8 @@ def get_summary(municipality, year, summary_type="monthly"):
             "planned_revenue": sum([i["amount"] for i in planned_revenue]),
             "realized_expenses": sum([i["amount"] for i in realized_expenses]),
             "realized_revenue": sum([i["amount"] for i in realized_revenue]),
+            "realized_expenses_date": get_document_date(MonthlyExpense, municipality, year),
+            "realized_revenue_date": get_document_date(MonthlyRevenue, municipality, year),
         }
 
     elif summary_type == "yearly":
@@ -92,10 +118,12 @@ def get_summary(municipality, year, summary_type="monthly"):
         summary = {
             "realized_expenses": sum([i["amount"] for i in realized_expenses]),
             "realized_revenue": sum([i["amount"] for i in realized_revenue]),
+            "realized_expenses_date": get_document_date(YearlyExpense, municipality, year),
+            "realized_revenue_date": get_document_date(YearlyRevenue, municipality, year),
         }
 
-    summary_keys = list(summary.keys())
-    summary_max_value = max(summary.values())
+    summary_keys = list(filter(lambda k: not k.endswith("_date"), summary.keys()))
+    summary_max_value = max([summary[k] for k in summary_keys])
     for key in summary_keys:
         summary[f"{key}_percentage"] = (
             summary[key] / summary_max_value if summary_max_value > 0 else 0
@@ -105,8 +133,11 @@ def get_summary(municipality, year, summary_type="monthly"):
 
     return summary
 
+
 def get_revenue_tree(municipality, year, summary, summary_type="monthly"):
-    revenue_tree_cache_key = get_cache_key(municipality, year, 'revenue_tree', summary_type)
+    revenue_tree_cache_key = get_cache_key(
+        municipality, year, "revenue_tree", summary_type
+    )
 
     data = cache.get(revenue_tree_cache_key)
     if data:
@@ -147,8 +178,11 @@ def get_revenue_tree(municipality, year, summary, summary_type="monthly"):
     cache.set(revenue_tree_cache_key, data)
     return data
 
+
 def get_expense_tree(municipality, year, summary, summary_type="monthly"):
-    expense_tree_cache_key = get_cache_key(municipality, year, 'expense_tree', summary_type)
+    expense_tree_cache_key = get_cache_key(
+        municipality, year, "expense_tree", summary_type
+    )
     data = cache.get(expense_tree_cache_key)
     if data:
         return data
@@ -187,9 +221,11 @@ def get_expense_tree(municipality, year, summary, summary_type="monthly"):
     cache.set(expense_tree_cache_key, data)
     return data
 
+
 def overview(request, municipality_id, year_id=None):
     municipality = Municipality.objects.get(id=municipality_id)
     year = get_year(year_id, municipality)
+    mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
 
     summary_type = "monthly" if year.is_current() else "yearly"
     summary = get_summary(municipality, year, summary_type=summary_type)
@@ -199,14 +235,17 @@ def overview(request, municipality_id, year_id=None):
         "overview.html",
         {
             "municipality": municipality,
+            "municipality_financial_year": mfy,
             "year": year,
             "summary": summary,
         },
     )
 
+
 def cut_of_funds(request, municipality_id, year_id=None):
     municipality = Municipality.objects.get(id=municipality_id)
     year = get_year(year_id, municipality)
+    mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
     tree_type = get_tree_type(request.GET)
 
     summary_type = "monthly" if year.is_current() else "yearly"
@@ -221,6 +260,7 @@ def cut_of_funds(request, municipality_id, year_id=None):
         {
             "years": get_municipality_published_years(municipality),
             "municipality": municipality,
+            "municipality_financial_year": mfy,
             "year": year,
             "summary": summary,
             "revenue": revenue,
@@ -228,6 +268,7 @@ def cut_of_funds(request, municipality_id, year_id=None):
             "tree_type": tree_type,
         },
     )
+
 
 def comparison_over_time(request, municipality_id, year_id=None):
     municipality = Municipality.objects.get(id=municipality_id)
@@ -245,9 +286,11 @@ def comparison_over_time(request, municipality_id, year_id=None):
         },
     )
 
+
 def get_context_for_table_code(request, municipality_id, year_id=None):
     municipality = Municipality.objects.get(id=municipality_id)
     year = get_year(year_id, municipality)
+    mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
     tree_type = get_tree_type(request.GET)
 
     summary_type = "monthly" if year.is_current() else "yearly"
@@ -287,11 +330,13 @@ def get_context_for_table_code(request, municipality_id, year_id=None):
     return {
         "summary": summary,
         "year": year,
+        "municipality_financial_year": mfy,
         "bar_colors": "2" if tree_type == "expenses" else "1",
         "tree_data": tree_data,
         "tree_type": tree_type,
         "tree_parents": tree_parents,
     }
+
 
 def cut_of_funds_table(request, municipality_id, year_id=None):
     return render(
@@ -300,12 +345,14 @@ def cut_of_funds_table(request, municipality_id, year_id=None):
         get_context_for_table_code(request, municipality_id, year_id),
     )
 
+
 def comparison_over_time_table(request, municipality_id, year_id=None):
     return render(
         request,
         "comparison_over_time_table.html",
         get_context_for_table_code(request, municipality_id, year_id),
     )
+
 
 def comparison_over_time_chart_data(request, municipality_id, year_id=None):
     municipality = Municipality.objects.get(id=municipality_id)
@@ -326,8 +373,10 @@ def comparison_over_time_chart_data(request, municipality_id, year_id=None):
 
         years_data[year_.name] = tree_data["children"]
 
-    return JsonResponse({
-        "year": year.name,
-        "years_data": years_data,
-        "tree_type": tree_type,
-    })
+    return JsonResponse(
+        {
+            "year": year.name,
+            "years_data": years_data,
+            "tree_type": tree_type,
+        }
+    )
