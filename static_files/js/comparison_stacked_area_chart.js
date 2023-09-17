@@ -1,10 +1,4 @@
 (function () {
-  const url = new URL(
-    window.__COMPARISON_CHART_DATA_URL__,
-    window.location.origin
-  );
-  url.search = window.location.search;
-
   let codeToName = {};
   let codeKeys = new Set();
   let data = [];
@@ -36,25 +30,40 @@
     return string;
   }
 
-  fetch(url)
-    .then(
-      (res) => {
-        if (!res.ok) {
-          console.error(res);
-          return { error: res.status };
+  function fetchChartData(searchString, hashString) {
+    const url = new URL(
+      window.__COMPARISON_CHART_DATA_URL__,
+      window.location.origin
+    );
+    url.search = searchString;
+
+    const [, code] = hashString.slice(1).split(";");
+    if (code) {
+      url.searchParams.set("code", code);
+    }
+
+    fetch(url)
+      .then(
+        (res) => {
+          if (!res.ok) {
+            console.error(res);
+            return { error: res.status };
+          }
+          return res.json();
+        },
+        (error) => {
+          console.error(error);
+          return { error: error.message };
         }
-        return res.json();
-      },
-      (error) => {
-        console.error(error);
-        return { error: error.message };
-      }
-    )
-    .then((data) => {
-      prepareData(data);
-      renderChart();
-      populateLegendOptions();
-    });
+      )
+      .then((responseData) => {
+        prepareData(responseData);
+        populateLegendOptions();
+        renderChart();
+      });
+  }
+
+  fetchChartData(window.location.search, window.location.hash);
 
   function prepareData(responseData) {
     codeToName = {};
@@ -97,11 +106,18 @@
   }
 
   function renderChart() {
+    // remove any old chart contents and clone element to remove all old event listeners
+    const oldElem = document.querySelector("#js-comparison-chart");
+    oldElem.innerHTML = "";
+    const newElem = oldElem.cloneNode(true);
+    oldElem.parentNode.replaceChild(newElem, oldElem);
+
     // Set the dimensions and margins of the graph
     const margin = { top: 20, right: 20, bottom: 30, left: 70 };
     const width = 640 - margin.left - margin.right;
     const height = 480 - margin.top - margin.bottom;
 
+    let hiddenKeys = {};
     let stackedData = d3.stack().keys(Array.from(codeKeys))(data);
 
     // Define the scales for the x and y axes
@@ -329,13 +345,14 @@
           const dot = dots[columnIndex].filter((d, i) => i === valueIndex);
 
           if (lastHoveredDot !== dot.node()) {
+            updateTooltip(dot);
             lastHoveredDot = dot.node();
 
             dots.forEach((dotsCol, index) => {
               dotsCol
                 .interrupt("hoverDot")
                 .attr("r", 3)
-                .attr("fill", (d, i) => colors[i % colors.length])
+                .attr("fill", (d, i) => getColor(i))
                 .attr("stroke", "none");
             });
 
@@ -345,28 +362,78 @@
               .duration(150)
               .attr("r", 6)
               .attr("fill", "white")
-              .attr("stroke", (d, i) => colors[valueIndex % colors.length])
+              .attr("stroke", (d, i) => getColor(valueIndex))
               .attr("stroke-width", 2);
           }
         })
         .on("mouseleave", (e) => {
+          updateTooltip(null);
           lastHoveredDot = null;
 
           dots.forEach((dotsCol, index) => {
             dotsCol
               .interrupt("hoverDot")
               .attr("r", 3)
-              .attr("fill", (d, i) => colors[i % colors.length])
+              .attr("fill", (d, i) => getColor(i))
               .attr("stroke", "none");
           });
         });
     }
+
+    // Legend checkboxes check/uncheck listener
+    const optionsElem = document.querySelector("#js-comparison-options");
+    optionsElem.addEventListener("change", (e) => {
+      console.log(e.target);
+      console.log(e.target.checked);
+
+      const code = e.target.value;
+      const checked = e.target.checked;
+
+      if (!checked) {
+        hiddenKeys[`code_${code}`] = {};
+      }
+
+      data.forEach((v) => {
+        if (checked) {
+          v[`code_${code}`] = hiddenKeys[`code_${code}`][v.year];
+        } else {
+          hiddenKeys[`code_${code}`][v.year] = v[`code_${code}`];
+          v[`code_${code}`] = 0;
+        }
+      });
+
+      if (checked) {
+        delete hiddenKeys[`code_${code}`];
+      }
+
+      stackedData = d3.stack().keys(Array.from(codeKeys))(data);
+
+      d3.selectAll(`[data-key]`).attr("opacity", 1);
+
+      Object.keys(hiddenKeys).forEach((key) => {
+        d3.selectAll(`[data-key="${key}"]`)
+          .transition()
+          .delay(1750)
+          .duration(150)
+          .attr("opacity", 0);
+      });
+
+      updateArea();
+      updateLines();
+      updateDots();
+      updateSelectedOutline();
+    });
   }
 
   function populateLegendOptions() {
-    const elem = document.querySelector("#js-comparison-options");
+    // reset contents to empty old data and clone element to remove all old event listeners
+    const oldElem = document.querySelector("#js-comparison-options");
+    oldElem.innerHTML = "";
+    const newElem = oldElem.cloneNode(true);
+    oldElem.parentNode.replaceChild(newElem, oldElem);
 
-    [...codeKeys].sort().forEach((codeKey) => {
+    // populate with new data
+    [...codeKeys].forEach((codeKey, i) => {
       const code = codeKey.replace("code_", "");
       const name = codeToName[codeKey];
       const template = `
@@ -374,13 +441,62 @@
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="${code}" id="checkbox_${code}" checked>
             <label class="form-check-label" for="checkbox_${code}">
-              <i class="icon icon-circle"></i>
+              <i class="icon icon-circle" style="background-color: ${getColor(
+                i
+              )};"></i>
               <span>${capFirstIfAllCaps(name)}</span>
             </label>
           </div>
         </div>
       `;
-      elem.insertAdjacentHTML("beforeend", template);
+      newElem.insertAdjacentHTML("beforeend", template);
     });
   }
+
+  function updateTooltip(dot) {
+    const chart = document.querySelector("#js-comparison-chart");
+    const tooltip = document.querySelector("#js-comparison-chart-tooltip");
+
+    if (!dot) {
+      tooltip.style.display = "none";
+      return;
+    }
+
+    if (dot && dot._groups[0].length > 0) {
+      tooltip.style.display = "block";
+      svg = chart.querySelector("svg");
+      const point = svg.createSVGPoint();
+      point.x = dot.attr("cx");
+      point.y = dot.attr("cy");
+      const matrix = dot.node().getScreenCTM();
+      const inverse = matrix.inverse();
+      const cursorPoint = point.matrixTransform(matrix);
+      tooltip.style.left = `${cursorPoint.x}px`;
+      tooltip.style.top = `${cursorPoint.y - 16}px`;
+
+      const d = dot.datum();
+      const codeKey = d.key;
+      const name = codeToName[codeKey];
+      const columnIndex = dot._parents[0].classList[0].split("-")[1];
+      const year = data[columnIndex].year;
+      const value = data[columnIndex][d.key];
+
+      const formattedName = capFirstIfAllCaps(name);
+
+      const formatter = new Intl.NumberFormat("sl-SI", {
+        style: "currency",
+        currency: "EUR",
+        currencyDisplay: "code",
+      });
+      const formattedValue = formatter.format(value);
+
+      tooltip.querySelector(".tooltip-name").innerText = formattedName;
+      tooltip.querySelector(".tooltip-year").innerText = year;
+      tooltip.querySelector(".tooltip-value").innerText = formattedValue;
+    }
+  }
+
+  window.addEventListener("hashchange", () => {
+    fetchChartData(window.location.search, window.location.hash);
+  });
 })();
