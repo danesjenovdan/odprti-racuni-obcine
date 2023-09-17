@@ -11,4 +11,4 @@ resources:
 images:
   - name: odprti-racuni-obcine
     newName: rg.fr-par.scw.cloud/djnd/odprti-racuni-obcine
-    newTag: 'bdb8a73946eeb45e5f0d99c447274c54082f0ff8'
+    newTag: '437d58936f8ea2f5e90a75e16f690ddb8cec4652'
