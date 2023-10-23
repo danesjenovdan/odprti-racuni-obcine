@@ -503,11 +503,12 @@ a.budget-box-link:hover {
   font-family: "Metropolis", sans-serif;
   font-weight: 600;
   color: #39444e;
+  text-decoration: none;
   transition: border-color 0.15s ease-in-out;
 }
 
 a.box-link:hover .button-arrow-link,
-a.budget-box-link:hover .button-arrow-link {
+.budget-box-link .button-arrow-link:hover {
   border-color: #39444e;
 }
 
@@ -551,6 +552,14 @@ a.budget-box-link:hover .button-arrow-link {
   }
 }
 
+.budget-box-link .budget-summary .budget-summary-title a {
+  color: inherit;
+}
+
+.budget-box-link .budget-summary .budget-summary-title a:hover {
+  text-decoration: none;
+}
+
 .budget-box-link .budget-summary .budget-amount {
   text-align: right;
 }
@@ -585,12 +594,14 @@ a.budget-box-link:hover .button-arrow-link {
 }
 
 .budget-box-link .budget-summary .budget-bar {
+  display: block;
 }
 .budget-box-link .budget-summary .budget-bar + .budget-bar {
   margin-top: 13px;
 }
 
 .budget-box-link .budget-summary .budget-bar .bar-max {
+  display: block;
   height: 40px;
 }
 .budget-box-link .budget-summary .budget-bar .bar-max--1 {
@@ -1494,4 +1505,37 @@ a.box-link:hover {
   background-size: auto 2px;
   background-image: url("/static/icons/pike-footer.svg");
   border-top: 0;
+}
+
+.loader-bg {
+  position: fixed;
+  z-index: 9999999;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-bg.hidden-bct.hidden-sac {
+  display: none !important;
+}
+
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 24px 18px;
+  border-radius: 3px;
+  background: #fff;
+  text-align: center;
+  color: #39444e;
+}
+
+.loader-content span {
+  margin-top: 10px;
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
