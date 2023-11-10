@@ -3,6 +3,7 @@
   let codeKeys = new Set();
   let data = [];
   let selectedColumnIndex = 1;
+  let updateHoveredAreaFunc;
 
   const colors = [
     "#64507d",
@@ -15,6 +16,12 @@
     "#899acd",
     "#c3cce6",
   ];
+
+  const slSI = d3.formatLocale({
+    thousands: ".",
+    grouping: [3],
+    currency: ["", " €"],
+  });
 
   function getColor(i) {
     return colors[i % colors.length];
@@ -125,7 +132,7 @@
     oldElem.parentNode.replaceChild(newElem, oldElem);
 
     // Set the dimensions and margins of the graph
-    const margin = { top: 20, right: 20, bottom: 30, left: 70 };
+    const margin = { top: 20, right: 20, bottom: 5, left: 80 };
     const width = 640 - margin.left - margin.right;
     const height = 480 - margin.top - margin.bottom;
 
@@ -202,7 +209,7 @@
         .data(stackedData)
         .join("path")
         .attr("data-key", (d) => d.key)
-        .attr("fill", (d, i) => `${getColor(i)}44`);
+        .attr("fill", (d, i) => `${getColor(i)}66`);
 
       if (animateFromZero) {
         tmp = tmp.attr("d", areaForAnimation(true));
@@ -214,6 +221,12 @@
         .attr("d", areaForAnimation(false));
     }
     updateArea(true);
+
+    // add group for hovered area (needs to be under dots)
+    const hoveredAreaGroup = areaSvg
+      .append("g")
+      .attr("class", "hovered-area")
+      .attr("transform", `translate(-${xScale.bandwidth() / 2},0)`);
 
     const lineForAnimation = (zero) =>
       d3
@@ -231,7 +244,8 @@
         .join("path")
         .attr("data-key", (d) => d.key)
         .attr("fill", "none")
-        .attr("stroke", (d, i) => getColor(i));
+        .attr("stroke", (d, i) => getColor(i))
+        .attr("stroke-width", 2);
 
       if (animateFromZero) {
         tmp = tmp.attr("d", lineForAnimation(true));
@@ -284,7 +298,7 @@
           .attr("id", "selectedYear")
           .attr("fill", "none")
           .attr("stroke", "#000")
-          .attr("stroke-width", "2")
+          .attr("stroke-width", "3")
           .attr("x", () => xScale.step() * selectedColumnIndex)
           .attr("width", () => xScale.bandwidth())
           .attr("y", yScale(0))
@@ -315,8 +329,59 @@
     }
     updateSelectedOutline(true);
 
-    const yAxis = d3.axisLeft().scale(yScale);
-    const xAxis = d3.axisBottom().scale(xScale);
+    // Draw the box around hovered area
+    let hoveredAreaElement;
+    function updateHoveredArea(columnIndex, valueIndex) {
+      if (!hoveredAreaElement) {
+        let tmp = hoveredAreaGroup
+          .append("rect")
+          .attr("id", "hoveredArea")
+          .attr("fill", "none")
+          .attr("stroke-width", 2)
+          .attr("width", () => xScale.bandwidth())
+          .attr("opacity", 0);
+        hoveredAreaElement = tmp;
+      }
+
+      if (columnIndex < 0 || valueIndex < 0) {
+        hoveredAreaElement.attr("opacity", 0);
+        return;
+      }
+
+      hoveredAreaElement
+        .attr("x", () => xScale.step() * columnIndex)
+        .attr("y", () => {
+          const range = stackedData[valueIndex][columnIndex];
+          return yScale(range[1]);
+        })
+        .attr("height", () => {
+          const range = stackedData[valueIndex][columnIndex];
+          const maxScaleValue = yScale(range[1]);
+          const minScaleValue = yScale(range[0]);
+          return minScaleValue - maxScaleValue;
+        })
+        .attr("fill", () => `${getColor(valueIndex)}77`)
+        .attr("stroke", () => getColor(valueIndex))
+        .attr("opacity", 1);
+    }
+    updateHoveredAreaFunc = (code) => {
+      const columnIndex = selectedColumnIndex;
+      const valueIndex = stackedData.findIndex((d) => d.key === `code_${code}`);
+
+      if (columnIndex < 0 || valueIndex < 0 || columnIndex >= dots.length) {
+        updateTooltip(null);
+        updateHoveredArea(-1, -1);
+        hoverDot(null, null);
+      } else {
+        const dot = dots[columnIndex].filter((d, i) => i === valueIndex);
+        updateTooltip(dot);
+        updateHoveredArea(columnIndex, valueIndex);
+        hoverDot(dot, valueIndex);
+      }
+    };
+
+    const yAxis = d3.axisLeft().scale(yScale).tickFormat(slSI.format("$,.0f"));
+    const xAxis = d3.axisBottom().scale(xScale).tickValues([]).tickFormat("");
 
     // add the X Axis
     svg.append("g").attr("transform", `translate(0,${height})`).call(xAxis);
@@ -325,6 +390,27 @@
     svg.append("g").call(yAxis);
 
     svg.call(mouseHovered);
+
+    function hoverDot(dot, valueIndex) {
+      dots.forEach((dotsCol, index) => {
+        dotsCol
+          .interrupt("hoverDot")
+          .attr("r", 3)
+          .attr("fill", (d, i) => getColor(i))
+          .attr("stroke", "none");
+      });
+
+      if (dot) {
+        dot
+          .interrupt("hoverDot")
+          .transition("hoverDot")
+          .duration(150)
+          .attr("r", 6)
+          .attr("fill", "white")
+          .attr("stroke", (d, i) => getColor(valueIndex))
+          .attr("stroke-width", 2);
+      }
+    }
 
     function mouseHovered(elem) {
       const bisectYear = d3.bisector((d) => d.year).center;
@@ -358,44 +444,23 @@
 
           if (lastHoveredDot !== dot.node()) {
             updateTooltip(dot);
+            updateHoveredArea(columnIndex, valueIndex);
             lastHoveredDot = dot.node();
-
-            dots.forEach((dotsCol, index) => {
-              dotsCol
-                .interrupt("hoverDot")
-                .attr("r", 3)
-                .attr("fill", (d, i) => getColor(i))
-                .attr("stroke", "none");
-            });
-
-            dot
-              .interrupt("hoverDot")
-              .transition("hoverDot")
-              .duration(150)
-              .attr("r", 6)
-              .attr("fill", "white")
-              .attr("stroke", (d, i) => getColor(valueIndex))
-              .attr("stroke-width", 2);
+            hoverDot(dot, valueIndex);
           }
         })
         .on("mouseleave", (e) => {
           updateTooltip(null);
+          updateHoveredArea(-1, -1);
           lastHoveredDot = null;
-
-          dots.forEach((dotsCol, index) => {
-            dotsCol
-              .interrupt("hoverDot")
-              .attr("r", 3)
-              .attr("fill", (d, i) => getColor(i))
-              .attr("stroke", "none");
-          });
+          hoverDot(null, null);
         });
     }
 
     // Legend checkboxes check/uncheck listener
     const optionsElem = document.querySelector("#js-comparison-options");
     optionsElem.addEventListener("change", (e) => {
-      console.log(e.target);
+      // console.log(e.target);
       console.log(e.target.checked);
 
       const code = e.target.value;
@@ -420,11 +485,15 @@
 
       stackedData = d3.stack().keys(Array.from(codeKeys))(data);
 
-      d3.selectAll(`[data-key]`).attr("opacity", 1);
+      d3.selectAll(`[data-key]`)
+        .interrupt("hiddenKeys")
+        .transition("hiddenKeys")
+        .attr("opacity", 1);
 
       Object.keys(hiddenKeys).forEach((key) => {
         d3.selectAll(`[data-key="${key}"]`)
-          .transition()
+          .interrupt("hiddenKeys")
+          .transition("hiddenKeys")
           .delay(1750)
           .duration(150)
           .attr("opacity", 0);
@@ -510,5 +579,14 @@
 
   window.addEventListener("hashchange", () => {
     fetchChartData(window.location.search, window.location.hash);
+  });
+
+  window.addEventListener("message", (event) => {
+    if (event.data.type === "bar-chart-row-hover") {
+      const code = event.data.code;
+      if (updateHoveredAreaFunc) {
+        updateHoveredAreaFunc(code);
+      }
+    }
   });
 })();
