@@ -296,6 +296,20 @@ h3 {
   font-weight: 400;
 }
 
+.contact-hr {
+  width: 500px;
+  height: 2px;
+  background-color: #39444e;
+  border: 0;
+  margin-block: 5rem;
+}
+
+.guides-text p {
+  font-size: 1.125rem;
+  font-weight: 300;
+  color: #39444e;
+}
+
 .footer hr {
   border-top: 1px solid #39444e;
 }
