@@ -1,4 +1,10 @@
-## odprti racuni obcine
+# ODPRTI RAČUNI OBČINE
+
+## Aplikacija za občine, ki želijo prikazovati proračune in primerjave skozi leta
+
+Lite verzija: https://github.com/danesjenovdan/odprti-racuni-obcine-lite/
+
+---
 
 ### How to run?
 
