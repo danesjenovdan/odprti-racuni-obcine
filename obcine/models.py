@@ -379,11 +379,11 @@ class PlannedRevenue(Revenue):
 
 
 class YearlyRevenue(Revenue):
-    document = models.ForeignKey('YearlyRevenueDocument', on_delete=models.CASCADE)
+    document = models.ForeignKey('YearlyRevenueDocument', on_delete=models.CASCADE, related_name='children')
 
 
 class MonthlyRevenue(Revenue):
-    document = models.ForeignKey('MonthlyRevenueDocument', on_delete=models.CASCADE)
+    document = models.ForeignKey('MonthlyRevenueDocument', on_delete=models.CASCADE, related_name='children')
 
 
 class PlannedRevenueDocument(RevenueParsableDocument):
@@ -401,6 +401,8 @@ class PlannedRevenueDocument(RevenueParsableDocument):
                 model=PlannedRevenue,
                 definition=RevenueDefinition
             )
+        else:
+            self.children.all().delete()
 
     class Meta:
         unique_together = ['municipality_year']
@@ -422,6 +424,8 @@ class YearlyRevenueDocument(RevenueParsableDocument):
                 model=YearlyRevenue,
                 definition=RevenueDefinition
             )
+        else:
+            self.children.all().delete()
 
     class Meta:
         unique_together = ['municipality_year']
@@ -443,6 +447,8 @@ class MonthlyRevenueDocument(RevenueParsableDocument):
                 model=MonthlyRevenue,
                 definition=RevenueDefinition,
             )
+        else:
+            self.children.all().delete()
 
     class Meta:
         unique_together = ['municipality_year']
@@ -473,14 +479,14 @@ class PlannedExpense(Expense):
 
 
 class YearlyExpense(Expense):
-    document = models.ForeignKey('YearlyExpenseDocument', on_delete=models.CASCADE)
+    document = models.ForeignKey('YearlyExpenseDocument', on_delete=models.CASCADE, related_name='children')
     class Meta:
         verbose_name = _('Yearly expense')
         verbose_name_plural = _('Yearly expense')
 
 
 class MonthlyExpense(Expense):
-    document = models.ForeignKey('MonthlyExpenseDocument', on_delete=models.CASCADE)
+    document = models.ForeignKey('MonthlyExpenseDocument', on_delete=models.CASCADE, related_name='children')
     class Meta:
         verbose_name = _('Monthly expense')
         verbose_name_plural = _('Monthly expense')
@@ -500,6 +506,8 @@ class PlannedExpenseDocument(ExpenseParsableDocument):
                 parser=XLSXAppraBudget,
                 model=PlannedExpense,
             )
+        else:
+            self.children.all().delete()
 
     class Meta:
         unique_together = ['municipality_year']
@@ -520,6 +528,8 @@ class MonthlyExpenseDocument(ExpenseParsableDocument):
                 parser=XLSXAppraBudget,
                 model=MonthlyExpense,
             )
+        else:
+            self.children.all().delete()
 
     class Meta:
         unique_together = ['municipality_year']
@@ -540,6 +550,8 @@ class YearlyExpenseDocument(ExpenseParsableDocument):
                 parser=XLSXAppraBudget,
                 model=YearlyExpense
             )
+        else:
+            self.children.all().delete()
 
     class Meta:
         unique_together = ['municipality_year']
