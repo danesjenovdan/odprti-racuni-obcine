@@ -3,7 +3,7 @@
 
 {% block description %}
   {% comment %} {% with municipality.name|remove_obcina_from_name as m_name %} {% endcomment %}
-  {% with municipality.name as m_name %}
+  {% with municipality.name_in_rodilnik as m_name %}
     {% include "description.html" with page_title="Grafični prikaz proračuna "|add:m_name page_description="S pomočjo interaktivnega vmesnika preglejte proračun občine ter načrtovane in realizirane prihodke in odhodke." %}
   {% endwith %}
 {% endblock description %}
