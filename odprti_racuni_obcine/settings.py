@@ -214,4 +214,3 @@ MARTOR_TOOLBAR_BUTTONS = [
     "toggle-maximize",
     "help",
 ]
-
