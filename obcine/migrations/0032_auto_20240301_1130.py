@@ -2,19 +2,19 @@
 
 from django.db import migrations
 
-def update_rodilnik(apps, schema_editor):
-        Municipality = apps.get_model("obcine", "Municipality")
 
-        for municipality in Municipality.objects.all():
-            municipality.name_in_rodilnik = municipality.name
-            municipality.save()
+def update_rodilnik(apps, schema_editor):
+    Municipality = apps.get_model("obcine", "Municipality")
+
+    for municipality in Municipality.objects.all():
+        municipality.name_in_rodilnik = municipality.name
+        municipality.save()
+
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('obcine', '0031_municipality_name_in_rodilnik'),
+        ("obcine", "0031_municipality_name_in_rodilnik"),
     ]
 
-    operations = [
-         migrations.RunPython(update_rodilnik)
-    ]
+    operations = [migrations.RunPython(update_rodilnik)]
