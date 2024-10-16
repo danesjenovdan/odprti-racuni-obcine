@@ -6,14 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('obcine', '0030_alter_monthlyexpense_document_and_more'),
+        ("obcine", "0030_alter_monthlyexpense_document_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='municipality',
-            name='name_in_rodilnik',
-            field=models.TextField(default='', verbose_name='Ime občine v rodilniku'),
+            model_name="municipality",
+            name="name_in_rodilnik",
+            field=models.TextField(default="", verbose_name="Ime občine v rodilniku"),
             preserve_default=False,
         ),
     ]
