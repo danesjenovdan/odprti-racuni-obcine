@@ -12,6 +12,7 @@ spec:
     - hosts:
         - odprtiracuniobcine.lb.djnd.si
         - odprtiracuni-obcine.djnd.si
+        - odprtiracuni-obcine.danesjenovdan.si
       secretName: odprti-racuni-obcine-tls
   rules:
     - host: odprtiracuniobcine.lb.djnd.si
@@ -25,6 +26,16 @@ spec:
                 port:
                   number: 8000
     - host: odprtiracuni-obcine.djnd.si
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: odprti-racuni-obcine
+                port:
+                  number: 8000
+    - host: odprtiracuni-obcine.danesjenovdan.si
       http:
         paths:
           - path: /
