@@ -208,6 +208,9 @@ class InstructionsAdmin(admin.ModelAdmin):
         # else:
         super().save_model(request, obj, form, change)
 
+    class Media:
+        css = {"all": ("css/admin-extra.css",)}
+
 
 class SuperAdminSite(admin.AdminSite):
     site_header = "Odprti računi občine"
