@@ -135,10 +135,25 @@ USE_TZ = True
 
 LOCALE_PATHS = [os.path.join(BASE_DIR, "locale")]
 
+
+# Default storage settings, with the staticfiles storage updated.
+# See https://docs.djangoproject.com/en/5.1/ref/settings/#std-setting-STORAGES
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # ManifestStaticFilesStorage is recommended in production, to prevent
+    # outdated JavaScript / CSS assets being served from cache
+    # (e.g. after a Wagtail upgrade).
+    # See https://docs.djangoproject.com/en/5.1/ref/contrib/staticfiles/#manifeststaticfilesstorage
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
-
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static_files")]
 
@@ -161,25 +176,21 @@ ENABLE_S3 = os.getenv("ENABLE_S3", False)
 
 # DJANGO STORAGE SETTINGS
 if os.getenv("ENABLE_S3", False):
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+    }
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
-    AWS_DEFAULT_ACL = (
-        "public-read"  # if files are not public they won't show up for end users
-    )
-    AWS_QUERYSTRING_AUTH = (
-        False  # query strings expire and don't play nice with the cache
-    )
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False
     AWS_LOCATION = os.getenv("AWS_LOCATION", "odprti-racuni-obcine")
     AWS_S3_REGION_NAME = os.getenv("AWS_REGION_NAME", "fr-par")
     AWS_S3_ENDPOINT_URL = os.getenv(
         "AWS_S3_ENDPOINT_URL", "https://s3.fr-par.scw.cloud"
     )
     AWS_S3_SIGNATURE_VERSION = os.getenv("AWS_S3_SIGNATURE_VERSION", "s3v4")
-    AWS_S3_FILE_OVERWRITE = (
-        False  # don't overwrite files if uploaded with same file name
-    )
+    AWS_S3_FILE_OVERWRITE = False
 
 
 if sentry_url := os.getenv("DJANGO_SENTRY_URL", False):
