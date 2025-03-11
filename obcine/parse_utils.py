@@ -32,8 +32,27 @@ def get_row_values(sheet, row_index):
     if isinstance(sheet, xlrd.sheet.Sheet):
         return sheet.row_values(row_index)
     if isinstance(sheet, openpyxl.worksheet.worksheet.Worksheet):
+        # openpyxl is 1 indexed
         row = list(sheet.iter_rows(min_row=row_index + 1, max_row=row_index + 1))
         return [cell.value for cell in row[0]]
+    raise Exception("File format not supported")
+
+
+def get_num_rows(sheet):
+    if isinstance(sheet, xlrd.sheet.Sheet):
+        return sheet.nrows
+    if isinstance(sheet, openpyxl.worksheet.worksheet.Worksheet):
+        return sheet.max_row  # returns last row (1 indexed) so this is correct
+    raise Exception("File format not supported")
+
+
+def get_row(sheet, row_index):
+    if isinstance(sheet, xlrd.sheet.Sheet):
+        return sheet.row(row_index)
+    if isinstance(sheet, openpyxl.worksheet.worksheet.Worksheet):
+        # openpyxl is 1 indexed
+        row = list(sheet.iter_rows(min_row=row_index + 1, max_row=row_index + 1))
+        return row[0]
     raise Exception("File format not supported")
 
 
@@ -69,16 +88,15 @@ class XLSXAppraBudget(object):
         nodes = {}
         node_keys = []
         i = 0
-        print(range(sheet.nrows))
         start_time = time.time()
-        for row_i in range(sheet.nrows):
+        for row_i in range(get_num_rows(sheet)):
             # skip first row
             if i == 0:
                 i += 1
                 continue
 
             # get first level data and save it
-            row = sheet.row(row_i)
+            row = get_row(sheet, row_i)
             ppp_id = row[2].value.strip()
             ppp_name = row[3].value.strip()
 
@@ -249,14 +267,14 @@ class XLSXAppraRevenue(object):
 
         nodes = {}
         i = 0
-        for row_i in range(sheet.nrows):
+        for row_i in range(get_num_rows(sheet)):
             # skip first row
             if i == 0:
                 i += 1
                 continue
 
             # get first level data and save it
-            row = sheet.row(row_i)
+            row = get_row(sheet, row_i)
             k6_id = row[1].value.strip()
             k6_name = row[2].value.strip()
             k6_amount = row[3].value
@@ -291,9 +309,9 @@ class XLSCodesParser(object):
         sheet = get_sheet_by_index(book, 2)
 
         rows = []
-        for row_i in range(sheet.nrows):
+        for row_i in range(get_num_rows(sheet)):
             row_values = []
-            for cell in sheet.row(row_i):
+            for cell in get_row(sheet, row_i):
                 row_values.append(cell.value)
             rows.append(row_values)
 
