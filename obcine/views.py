@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from django.core.cache import cache
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
@@ -66,7 +65,7 @@ def get_year(year_slug, municipality):
         return municipality_financial_year.first().financial_year
 
     municipality_financial_year = MunicipalityFinancialYear.objects.filter(
-        financial_year__name=str(datetime.now().year),
+        financial_year__name=str(timezone.now().year),
         municipality=municipality,
         is_published=True,
     )
