@@ -1,8 +1,9 @@
 import os
 
-import xlrd
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+
+from obcine.parse_utils import get_row_values, get_sheet_by_index, open_workbook
 
 
 def document_size_validator(
@@ -31,8 +32,8 @@ def validate_image_extension(value):
 
 
 def validate_expanse_file(value):
-    book = xlrd.open_workbook(file_contents=value.read())
-    sheet = book.sheet_by_index(0)
+    book = open_workbook(file_contents=value.read())
+    sheet = get_sheet_by_index(book, 0)
     requierd_rows = [
         "PU_ID",
         "PU_OPIS",
@@ -52,13 +53,13 @@ def validate_expanse_file(value):
         "F2",
         "F3",
     ]
-    if sheet.row_values(0) != requierd_rows:
+    if get_row_values(sheet, 0) != requierd_rows:
         raise ValidationError(_("Datoteka ni pravilno izvozena iz sitema APRA."))
 
 
 def validate_revenue_file(value):
-    book = xlrd.open_workbook(file_contents=value.read())
-    sheet = book.sheet_by_index(0)
+    book = open_workbook(file_contents=value.read())
+    sheet = get_sheet_by_index(book, 0)
     requierd_rows = ["BLC_ID", "K6_ID", "K6_OPIS", "VREDNOST_PRI"]
-    if sheet.row_values(0) != requierd_rows:
+    if get_row_values(sheet, 0) != requierd_rows:
         raise ValidationError(_("Datoteka ni pravilno izvozena iz sitema APRA."))

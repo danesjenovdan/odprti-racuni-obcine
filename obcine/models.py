@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+import traceback
 from importlib import import_module
 
 from django.conf import settings
@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from martor.models import MartorField
@@ -56,7 +57,7 @@ class Task(Timestampable):
     payload = models.JSONField(help_text="Payload kwargs")
 
     def run(self):
-        self.started_at = datetime.now()
+        self.started_at = timezone.now()
         self.save()
         try:
             data = self.payload
@@ -90,11 +91,12 @@ class Task(Timestampable):
             else:
                 parser.parse_file(file_path=document.file.path)
 
-            self.finished_at = datetime.now()
+            self.finished_at = timezone.now()
             self.save()
 
         except Exception as e:
-            self.errored_at = datetime.now()
+            traceback.print_exc()
+            self.errored_at = timezone.now()
             self.error_msg = e
             self.save()
 
@@ -243,7 +245,7 @@ class FinancialYear(models.Model):
         this method return True if year is current or in future
         """
         try:
-            return datetime.now().year <= int(self.name)
+            return timezone.now().year <= int(self.name)
         except:
             return False
 

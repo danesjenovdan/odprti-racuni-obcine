@@ -157,7 +157,7 @@ class RevenueAdmin(admin.ModelAdmin):
 
 
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ["name"]
+    list_display = ["name", "finished_at", "errored_at"]
 
 
 class MonthlyRevenueRealizatioObcineAdmin(admin.ModelAdmin):
