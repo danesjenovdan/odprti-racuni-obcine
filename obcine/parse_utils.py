@@ -1,8 +1,40 @@
 import time
+from io import BytesIO
 
+import openpyxl
+import openpyxl.workbook.workbook
+import openpyxl.worksheet.worksheet
 import requests
 import xlrd
-from django.db import transaction
+
+
+def open_workbook(filename=None, file_contents=None):
+    file_format = xlrd.inspect_format(filename, file_contents)
+    if file_format == "xls":
+        return xlrd.open_workbook(filename, file_contents=file_contents)
+    if file_format == "xlsx":
+        if filename:
+            return openpyxl.load_workbook(filename)
+        if file_contents:
+            return openpyxl.load_workbook(BytesIO(file_contents))
+    raise Exception("File format not supported")
+
+
+def get_sheet_by_index(book, index):
+    if isinstance(book, xlrd.book.Book):
+        return book.sheet_by_index(index)
+    if isinstance(book, openpyxl.workbook.workbook.Workbook):
+        return book.worksheets[index]
+    raise Exception("File format not supported")
+
+
+def get_row_values(sheet, row_index):
+    if isinstance(sheet, xlrd.sheet.Sheet):
+        return sheet.row_values(row_index)
+    if isinstance(sheet, openpyxl.worksheet.worksheet.Worksheet):
+        row = list(sheet.iter_rows(min_row=row_index + 1, max_row=row_index + 1))
+        return [cell.value for cell in row[0]]
+    raise Exception("File format not supported")
 
 
 class XLSXAppraBudget(object):
@@ -26,8 +58,8 @@ class XLSXAppraBudget(object):
         return obj
 
     def parse_file(self, file_path="files/proracun_apra.xlsx"):
-        book = xlrd.open_workbook(file_path)
-        sheet = book.sheet_by_index(0)
+        book = open_workbook(file_path)
+        sheet = get_sheet_by_index(book, 0)
 
         # delete previous data
         self.model.objects.filter(
@@ -212,8 +244,8 @@ class XLSXAppraRevenue(object):
             year=self.year, municipality=self.municipality
         ).delete()
 
-        book = xlrd.open_workbook(file_path)
-        sheet = book.sheet_by_index(0)
+        book = open_workbook(file_path)
+        sheet = get_sheet_by_index(book, 0)
 
         nodes = {}
         i = 0
@@ -237,65 +269,6 @@ class XLSXAppraRevenue(object):
         self.municipality_year.save()
 
 
-# class XLSParser(object):
-#     def __init__(self):
-#         self.depths = {}
-#         self.org = Municipality.objects.get(id=1)
-#         self.year = FinancialYear.objects.first()
-#         self.parse_file()
-
-#     def parse_line(self, line):
-#         return [(i, item) for i, item in enumerate(line) if item]
-
-#     def get_parent_node(self, depth, last_added):
-#         current = last_added
-#         while self.depths[current.id] >= depth:
-#             current = current.parent
-#             if not current:
-#                 return None
-#         return current
-
-
-#     def parse_file(self, file_path='files/prihodki_ajdovscina_2022.xls'):
-#         book = xlrd.open_workbook(file_path)
-#         sheet = book.sheet_by_index(0)
-
-#         rows = []
-#         for row_i in range(sheet.nrows):
-#             row_values = []
-#             for cell in sheet.row(row_i):
-#                 row_values.append(cell.value)
-#             rows.append(row_values)
-
-#         parent = None
-
-#         last_added = None
-
-#         i = 0
-#         for row in rows:
-#             items = self.parse_line(row)
-#             if len(items) != 3:
-#                 continue
-#             print(items)
-#             if last_added:
-#                 parent = self.get_parent_node(items[0][0], last_added)
-#             else:
-#                 parent = None
-
-#             rc = RevenueObcine(
-#                 name=items[1][1],
-#                 amount=items[2][1],
-#                 code=items[0][1],
-#                 parent=parent,
-#                 order=i,
-#                 organization=self.org,
-#                 year=self.year)
-#             rc.save()
-#             self.depths[rc.id] = int(items[0][0])
-#             last_added = rc
-#             i+=1
-
-
 class XLSCodesParser(object):
     def __init__(self, model):
         self.depths = {}
@@ -314,8 +287,8 @@ class XLSCodesParser(object):
         return current
 
     def parse_file(self, file_path="files/kode_matic.xlsx"):
-        book = xlrd.open_workbook(file_path)
-        sheet = book.sheet_by_index(2)
+        book = open_workbook(file_path)
+        sheet = get_sheet_by_index(book, 2)
 
         rows = []
         for row_i in range(sheet.nrows):
