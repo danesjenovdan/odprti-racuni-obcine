@@ -26,6 +26,9 @@ Visit `http://localhost:8000/admin/`, log in with `admin` and `changeme` and edi
 
 ### URLS
 
+### Adding new Konto
+./manage.py parse_revenue_definition_from_pdf https://www.uradni-list.si/files/RS_-2024-081-02384-OB~P001-0000.PDF
+
 #### Admin
 http://localhost:8000/admin/
 
