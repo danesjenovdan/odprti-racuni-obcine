@@ -297,6 +297,26 @@ def overview(request, municipality_slug, year_slug=None):
     )
 
 
+def embed_overview(request, municipality_slug, year_slug=None):
+    municipality = get_object_or_404(Municipality, slug=municipality_slug)
+    year = get_year(year_slug, municipality)
+    mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
+
+    summary_type = get_summary_type(municipality, year)
+    summary = get_summary(municipality, year, summary_type=summary_type)
+
+    return render(
+        request,
+        "embed_overview.html",
+        {
+            "municipality": municipality,
+            "municipality_financial_year": mfy,
+            "year": year,
+            "summary": summary,
+        },
+    )
+
+
 def cut_of_funds(request, municipality_slug, year_slug=None):
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)

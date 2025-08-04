@@ -1,0 +1,55 @@
+{% load static %}<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+  <title>Odprti računi - {{ municipality.name }}</title>
+  <meta name="description" content="Enostaven in razumljiv vpogled v občinski proračun. Odprti računi, dobri prijatelji!">
+  <meta name="author" content="Danes je nov dan">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,400;1,700&amp;display=swap">
+  <link rel="stylesheet" href="{% static "fonts/metropolis/font.css" %}">
+
+  <link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">
+  <link rel="stylesheet" href="{% static "css/style.css" %}">
+  <style>
+    .embed-container section.budget {
+      padding: 0;
+    }
+
+    .embed-container section.budget .container,
+    .embed-container section.budget .container .row,
+    .embed-container section.budget .container .row .col {
+      max-width: 100%;
+      width: auto;
+      padding: 0;
+      margin: 0;
+    }
+
+    .embed-container section.budget .container .row .col {
+      max-width: 926px;
+    }
+
+    .embed-container section.budget .col .budget-box-link {
+      margin: 5px;
+    }
+  </style>
+
+  <base target="_blank">
+
+  <script defer data-domain="odprtiracuni-obcine.djnd.si" src="https://plausible.lb.djnd.si/js/plausible.js"></script>
+</head>
+
+<body>
+  <div class="embed-container">
+    {% include "budget.html" %}
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.3.6/iframeResizer.contentWindow.min.js" integrity="sha512-R7Piufj0/o6jG9ZKrAvS2dblFr2kkuG4XVQwStX+/4P+KwOLUXn2DXy0l1AJDxxqGhkM/FJllZHG2PKOAheYzg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</body>
+
+</html>

@@ -84,7 +84,7 @@
               {% endif %}
             </div>
           </div>
-          {% if request.resolver_match.url_name == 'overview' %}
+          {% if 'overview' in request.resolver_match.url_name %}
           <div class="text-center mt-5 mb-3">
             <a class="button-arrow-link" href="{% url 'cut_of_funds' municipality_slug=municipality_slug year_slug=year.name|slugify %}">Podrobneje razišči letošnji proračun in realizacijo <i class="icon icon-puscica ms-1"></i></a>
           </div>
