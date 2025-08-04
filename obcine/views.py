@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic import RedirectView
 
 from obcine.models import (
@@ -297,6 +298,7 @@ def overview(request, municipality_slug, year_slug=None):
     )
 
 
+@xframe_options_exempt
 def embed_overview(request, municipality_slug, year_slug=None):
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
