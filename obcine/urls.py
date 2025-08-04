@@ -107,4 +107,15 @@ urlpatterns = [
         views.comparison_over_time_chart_data,
         name="comparison_over_time_chart_data",
     ),
+    # Embeds
+    path(
+        "embed/<str:municipality_slug>/pregled/",
+        views.embed_overview,
+        name="embed-overview",
+    ),
+    path(
+        "embed/<str:municipality_slug>/pregled/<str:year_slug>/",
+        views.embed_overview,
+        name="embed-overview",
+    ),
 ]
