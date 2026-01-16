@@ -11,18 +11,51 @@ spec:
       backoffLimit: 1
       template:
         spec:
+          volumes:
+            - name: odprti-racuni-obcine-shared-storage
+              emptyDir: {}
+          initContainers:
+            - name: collectstatic
+              image: odprti-racuni-obcine
+              volumeMounts:
+                - name: odprti-racuni-obcine-shared-storage
+                  mountPath: /pvc
+              command:
+                - python
+                - manage.py
+                - collectstatic
+                - --no-input
+              env:
+                - name: DJANGO_SETTINGS_MODULE
+                  value: odprti_racuni_obcine.settings
+                - name: DJANGO_STATIC_ROOT
+                  value: "/pvc/static"
+              envFrom:
+                - secretRef:
+                    name: odprti-racuni-obcine-credentials
+              resources:
+                requests:
+                  memory: 200Mi
+                  cpu: 200m
+                limits:
+                  memory: 200Mi
+                  cpu: 200m
           containers:
-          - name: create-year-cronjob
-            image: odprti-racuni-obcine
-            command:
-              - python
-              - manage.py
-              - create_financial_year
-            env:
-              - name: DJANGO_SETTINGS_MODULE
-                value: odprti_racuni_obcine.settings
-            envFrom:
-              - secretRef:
-                  name: odprti-racuni-obcine-credentials
-
+            - name: create-year-cronjob
+              image: odprti-racuni-obcine
+              env:
+                - name: DJANGO_SETTINGS_MODULE
+                  value: odprti_racuni_obcine.settings
+                - name: DJANGO_STATIC_ROOT
+                  value: "/pvc/static"
+              envFrom:
+                - secretRef:
+                    name: odprti-racuni-obcine-credentials
+              command:
+                - python
+                - manage.py
+                - create_financial_year
+              volumeMounts:
+                - name: odprti-racuni-obcine-shared-storage
+                  mountPath: /pvc
           restartPolicy: Never
