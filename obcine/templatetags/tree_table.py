@@ -12,7 +12,10 @@ def next_multiple(value, multiple_of):
 
 
 def get_max_amount(node):
-    return max([node.get("amount", 0), node.get("planned", 0), node.get("realized", 0)])
+    amount = node.get("amount", 0) or 0
+    planned = node.get("planned", 0) or 0
+    realized = node.get("realized", 0) or 0
+    return max([amount, planned, realized])
 
 
 @register.simple_tag
