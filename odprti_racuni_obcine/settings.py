@@ -40,7 +40,6 @@ DATABASES = {
 
 ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = [
-    "https://odprtiracuniobcine.lb.djnd.si",
     "https://odprtiracuni-obcine.djnd.si",
     "https://odprtiracuni-obcine.danesjenovdan.si",
 ]
