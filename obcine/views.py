@@ -1,4 +1,6 @@
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_unicode_slug
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -279,6 +281,11 @@ def get_expense_tree(municipality, year, summary, summary_type="monthly"):
 
 
 def overview(request, municipality_slug, year_slug=None):
+    try:
+        validate_unicode_slug(municipality_slug)
+    except ValidationError:
+        raise Http404
+
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
     mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
@@ -300,6 +307,11 @@ def overview(request, municipality_slug, year_slug=None):
 
 @xframe_options_exempt
 def embed_overview(request, municipality_slug, year_slug=None):
+    try:
+        validate_unicode_slug(municipality_slug)
+    except ValidationError:
+        raise Http404
+
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
     mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
@@ -320,6 +332,11 @@ def embed_overview(request, municipality_slug, year_slug=None):
 
 
 def cut_of_funds(request, municipality_slug, year_slug=None):
+    try:
+        validate_unicode_slug(municipality_slug)
+    except ValidationError:
+        raise Http404
+
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
     mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
@@ -349,6 +366,11 @@ def cut_of_funds(request, municipality_slug, year_slug=None):
 
 
 def comparison_over_time(request, municipality_slug, year_slug=None):
+    try:
+        validate_unicode_slug(municipality_slug)
+    except ValidationError:
+        raise Http404
+
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
     tree_type = get_tree_type(request.GET)
@@ -366,6 +388,11 @@ def comparison_over_time(request, municipality_slug, year_slug=None):
 
 
 def get_context_for_table_code(request, municipality_slug, year_slug=None):
+    try:
+        validate_unicode_slug(municipality_slug)
+    except ValidationError:
+        raise Http404
+
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
     mfy = year.municipalityfinancialyears.filter(municipality=municipality).first()
@@ -441,6 +468,11 @@ def comparison_over_time_table(request, municipality_slug, year_slug=None):
 
 
 def comparison_over_time_chart_data(request, municipality_slug, year_slug=None):
+    try:
+        validate_unicode_slug(municipality_slug)
+    except ValidationError:
+        raise Http404
+
     municipality = get_object_or_404(Municipality, slug=municipality_slug)
     year = get_year(year_slug, municipality)
     tree_type = get_tree_type(request.GET)
